@@ -33,6 +33,9 @@ class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = 'postgresql://fulfil:password@localhost/fulfil_db'
     SQLALCHEMY_ECHO = True
+    CELERY_BROKER_URL = 'amqp://{}:{}@localhost:5672'.format(os.environ['CELERY_USERNAME'],
+                                                             os.environ['CELERY_PASSWORD'])
+    CELERY_RESULT_BACKEND = ''
 
 
 class ProductionConfig(Config):
