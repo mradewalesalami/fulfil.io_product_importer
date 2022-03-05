@@ -33,9 +33,6 @@ class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = 'postgresql://fulfil:password@localhost/fulfil_db'
     SQLALCHEMY_ECHO = True
-    CELERY_BROKER_URL = 'amqp://{}:{}@localhost:5672'.format(os.environ['CELERY_USERNAME'],
-                                                             os.environ['CELERY_PASSWORD'])
-    CELERY_RESULT_BACKEND = ''
 
 
 class ProductionConfig(Config):
@@ -63,7 +60,7 @@ def detect_configuration_mode():
     from errors import ConfigNotFound
     config_mode = os.environ['CONFIG_MODE']
     if config_mode in ALLOWED_CONFIGURATION_MODES:
-        print('{} configuration mode detected'.format(config_mode))
+        print('("{}") configuration mode detected'.format(config_mode))
         return config_mode
     error_message = 'Invalid or no configuration mode ("{}") detected'.format(config_mode)
     raise ConfigNotFound(error_message)

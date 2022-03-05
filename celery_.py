@@ -1,9 +1,10 @@
 from celery import Celery
+import celeryconfig
 
 
 def make_celery(app):
-    celery = Celery(app.import_name, backend=app.config['CELERY_RESULT_BACKEND'], broker=app.config['CELERY_BROKER_URL'])
-    celery.conf.update(app.config)
+    celery = Celery(app.import_name)
+    # celery.conf.update(app.config)
     
     class ContextTask(celery.Task):
         def __call__(self, *args, **kwargs):
@@ -11,4 +12,7 @@ def make_celery(app):
                 return self.run(*args, **kwargs)
     
     celery.Task = ContextTask
+    
+    celery.config_from_object('celeryconfig')
+    
     return celery

@@ -26,7 +26,7 @@ def setup_blueprints(app):
 
 def create_app(configuration_mode):
     from configure import load_configuration
-    from celery import make_celery
+    from celery_ import make_celery
     
     app = Flask(__name__, instance_relative_config=True)
     
