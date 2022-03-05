@@ -31,7 +31,7 @@ class Config:
 class DevelopmentConfig(Config):
     ENV = "development"
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = ''
+    SQLALCHEMY_DATABASE_URI = 'postgresql://fulfil:password@localhost/fulfil_db'
     SQLALCHEMY_ECHO = True
 
 
