@@ -78,19 +78,30 @@ def delete_product(product_id):
     return make_delete_response(message='SKU ({}) with ID ({}) Successfully Deleted.'.format(product.sku, product.id))
 
 
+@v1_api_product_importer.route('/products', methods=['DELETE'])
+def delete_all_products():
+    from tasks import delete_all_products_from_db
+    delete_all_products_from_db.delay()
+    
+    return make_delete_response(message='All Products Queued for Deletion. Deletion in progress.')
+
+
+# @v1_api_product_importer.route('/', methods=['POST'])
+# def add_product_from_csv():
+#     payload = request.fil
+
+
 # @v1_api_product_importer.route('/products', methods=['GET'])
 # def get_all_products():
 #     args = request.args
-#     sku = args.get('sku') or None
-#     name = args.get('name') or None
-#     is_active = args.get('is_active') or None
-#     description = args.get('description') or None
+#     sku = args.get('sku') or ''
+#     name = args.get('name') or ''
+#     is_active = args.get('is_active') or ''
+#     description = args.get('description') or ''
 #
 #     query = Product.query.filter().all()
+
 #
-#
-#
-# #
 # @v1_api_product_importer.route('/products', methods=['GET'])
 # def get_product():
 #     args = request.args
