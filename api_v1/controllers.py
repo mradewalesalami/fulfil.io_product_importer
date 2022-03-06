@@ -2,7 +2,7 @@ from flask import jsonify, request
 from . import v1_api_product_importer
 from core.models import Product
 from core import db
-from helpers import make_failure_response, make_success_response
+from helpers import make_failure_response, make_success_response, make_delete_response
 
 
 @v1_api_product_importer.route('/products', methods=['POST'])
@@ -18,17 +18,66 @@ def add_product_from_json():
         return make_failure_response(message='Invalid or Missing Request Data')
         
     product = Product(name=name, sku=sku, description=description, is_active=is_active)
+    
     db.session.add(product)
     db.session.commit()
+    
     data = {
         'name': product.name,
         'sku': product.sku,
         'description': product.description,
         'is_active': product.is_active
     }
+    
+    return make_success_response(data)
+
+
+@v1_api_product_importer.route('/products/<product_id>', methods=['PATCH'])
+def update_product(product_id):
+    product = Product.query.get(product_id)
+    
+    if product is None:
+        return make_failure_response(message='Product with ID ({}) Not Found.'.format(product_id))
+
+    payload = request.json
+
+    if 'name' in payload and payload['name'] != '' or None:
+        product.name = payload['name']
+    if 'sku' in payload and payload['sku'] != '' or None:
+        product.sku = payload['sku']
+    if 'description' in payload and payload['description'] != '' or None:
+        product.description = payload['description']
+    if 'is_active' in payload and payload['is_active'] is True:
+        product.is_active = True
+    elif 'is_active' in payload and payload['is_active'] is False:
+        product.is_active = False
+    
+    db.session.add(product)
+    db.session.commit()
+
+    data = {
+        'name': product.name,
+        'sku': product.sku,
+        'description': product.description,
+        'is_active': product.is_active
+    }
+    
     return make_success_response(data)
     
+
+@v1_api_product_importer.route('/products/<product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    product = Product.query.get(product_id)
     
+    if product is None:
+        return make_failure_response(message='Product with ID ({}) Not Found.'.format(product_id))
+    
+    db.session.delete(product)
+    db.session.commit()
+    
+    return make_delete_response(message='SKU ({}) with ID ({}) Successfully Deleted.'.format(product.sku, product.id))
+
+
 # @v1_api_product_importer.route('/products', methods=['GET'])
 # def get_all_products():
 #     args = request.args

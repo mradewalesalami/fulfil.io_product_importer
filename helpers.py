@@ -14,13 +14,7 @@ def make_failure_response(message):
     response = {
         'status': 'FAILURE',
         'error': {
-            'message': message,
-            'payload_example': {
-                "name": "name",
-                "sku": "sku",
-                "description": "description",
-                "is_active": "true or false"
-            }
+            'message': message
         }
     }
     return jsonify(response)
@@ -30,5 +24,15 @@ def make_success_response(response_data):
     response = {
         'status': 'SUCCESS',
         'data': [response_data]
+    }
+    return jsonify(response)
+
+
+def make_delete_response(message):
+    response = {
+        'status': 'SUCCESS',
+        'info': {
+            'message': message
+        }
     }
     return jsonify(response)
