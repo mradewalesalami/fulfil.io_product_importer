@@ -4,7 +4,7 @@ from . import db
 class Product(db.Model):
     __tablename__ = 'products'
     id = db.Column(db.Integer, primary_key=True)
-    sku = db.Column(db.String(255), unique=True, nullable=False)
+    sku = db.Column(db.String(255), unique=True, nullable=False, index=True)
     name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text(), nullable=False)
     is_active = db.Column(db.Boolean(), default=False)
