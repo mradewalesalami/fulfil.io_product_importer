@@ -1,23 +1,24 @@
-from flask import jsonify, request, current_app as app
+import json
+import os
+
+import requests
+from celery.result import AsyncResult
+from flask import request, current_app as app
+from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
-from . import v1_api_product_importer
-from core.models import Product
+from werkzeug.utils import secure_filename
+
 from core import db
+from core.models import Product
 from helpers import (
     make_failure_response,
     make_success_response,
     make_delete_response,
     allowed_file_upload,
-    make_pending_response,
     get_project_root,
     make_processing_response
 )
-from werkzeug.utils import secure_filename
-import os
-from sqlalchemy import and_
-import requests
-import json
-from celery.result import AsyncResult
+from . import v1_api_product_importer
 
 
 @v1_api_product_importer.route('/products/<product_id>', methods=['GET'])
@@ -51,7 +52,8 @@ def add_product_from_json():
     """
     
     if request.content_type != 'application/json':
-        return make_failure_response(message='Invalid Content-Type in request headers. Only application/json is allowed.')
+        return make_failure_response(
+            message='Invalid Content-Type in request headers. Only application/json is allowed.')
     
     payload = request.json
     
@@ -125,7 +127,8 @@ def update_product(product_id):
     """
     
     if request.content_type != 'application/json':
-        return make_failure_response(message='Invalid Content-Type in request headers. Only application/json is allowed.')
+        return make_failure_response(
+            message='Invalid Content-Type in request headers. Only application/json is allowed.')
     
     product = Product.query.get(product_id)
     

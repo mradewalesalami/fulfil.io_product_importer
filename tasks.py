@@ -1,10 +1,12 @@
+import os
+
+from dask import dataframe as dd
+from flask import current_app as app
+
 from app import celery
 from core import db
 from core.models import Product
-from dask import dataframe as dd
-import os
 from helpers import get_project_root
-from flask import current_app as app
 
 
 @celery.task
@@ -50,7 +52,7 @@ def upload_product_from_csv_to_db(filename):
                 is_active=True if row.Index % 2 == 0 else False
             )
             db.session.add(product)
-            
+    
     db.session.commit()
     
     # remove the csv file from file system after use to save disk space.

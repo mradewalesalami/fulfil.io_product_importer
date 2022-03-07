@@ -1,4 +1,5 @@
 import os
+
 from flask import jsonify
 
 ALLOWED_FILE_EXTENSIONS = {'csv'}
@@ -51,7 +52,7 @@ def make_success_response(response_data, meta=None):
     
     if meta is not None:
         response.update(meta=meta)
-        
+    
     return jsonify(response)
 
 
@@ -81,7 +82,7 @@ def make_pending_response(message, meta=None):
             'message': message
         }
     }
-
+    
     if meta is not None:
         response.update(meta=meta)
     
@@ -99,7 +100,7 @@ def make_processing_response(message=None, meta=None):
     
     if meta is not None:
         response.update(meta=meta)
-        
+    
     if message is not None:
         response.update(message=message)
     

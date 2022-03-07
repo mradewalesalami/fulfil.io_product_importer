@@ -3,7 +3,9 @@ This module provides all configuration for the application.
 """
 
 import os
+
 from dotenv import load_dotenv
+
 from helpers import get_project_root
 
 ROOT_DIR = get_project_root()
@@ -31,6 +33,7 @@ class Config:
 class DevelopmentConfig(Config):
     ENV = "development"
     DEBUG = True
+    TESTING = False
     SQLALCHEMY_DATABASE_URI = 'postgresql://fulfil:password@localhost/fulfil_db'
     SQLALCHEMY_ECHO = True
 
@@ -38,15 +41,24 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     ENV = "production"
     DEBUG = False
+    TESTING = False
     SQLALCHEMY_DATABASE_URI = ''
+    SQLALCHEMY_ECHO = False
+
+
+class TestConfig(Config):
+    ENV = "test"
+    DEBUG = False
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///test.db'
     SQLALCHEMY_ECHO = False
 
 
 config_modes = {
     'development': DevelopmentConfig,
-    'production': ProductionConfig
+    'production': ProductionConfig,
+    'test': TestConfig
 }
-
 
 ALLOWED_CONFIGURATION_MODES = ['development', 'production']
 
