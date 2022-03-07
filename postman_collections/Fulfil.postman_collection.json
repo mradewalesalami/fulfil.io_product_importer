@@ -1,0 +1,239 @@
+{
+	"info": {
+		"_postman_id": "78012f9c-7fd7-4f25-ac45-0de53431018f",
+		"name": "Fulfil",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "index",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}",
+					"host": [
+						"{{url}}"
+					]
+				},
+				"description": "#### Welcome page to test API works"
+			},
+			"response": []
+		},
+		{
+			"name": "add_product_from_json",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"name\",\r\n    \"sku\": \"sku\",\r\n    \"description\": \"description\",\r\n    \"is_active\": true\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/products",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"products"
+					]
+				},
+				"description": "#### Endpoint to add a single product to the database.\n#### Payload Content-Type must be in format application/json.\n#### Endpoint overrides existing duplicates with same SKU."
+			},
+			"response": []
+		},
+		{
+			"name": "add_product_from_csv",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": []
+						}
+					],
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/products/csv_upload",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"products",
+						"csv_upload"
+					]
+				},
+				"description": "#### Endpoint to add products to the database using a csv file.\n### The name/key of the form must be set to file.\n#### This endpoint accepts only csv files to be uploaded."
+			},
+			"response": []
+		},
+		{
+			"name": "delete_single_product",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/products/<product_id>",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"products",
+						"<product_id>"
+					]
+				},
+				"description": "### Endpoint to delete a single product from the database.\n\n\n#### Sample request\n\n{{base_url}}/products/1\n\n\n#### Sample response\n\n{\n    \"info\": {\n        \"message\": \"SKU (we-move-west) with ID (20) Successfully Deleted.\"\n    },\n    \"status\": \"SUCCESS\"\n}"
+			},
+			"response": []
+		},
+		{
+			"name": "get_single_product",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/products/<product_id>",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"products",
+						"<product_id>"
+					]
+				},
+				"description": "### Endpoint to retrieve a single product from the database.\n\n\n#### Sample request\n\n{{base_url}}/products/1\n\n\n#### Sample response\n\n{\n    \"data\": {\n        \"description\": \"Art community floor adult your single type. Per back community former stock thing.\",\n        \"is_active\": true,\n        \"name\": \"Bryce Jones\",\n        \"sku\": \"lay-raise-best-end\"\n    },\n    \"status\": \"SUCCESS\"\n}"
+			},
+			"response": []
+		},
+		{
+			"name": "get_all_product",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/products",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"products"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "",
+							"disabled": true
+						},
+						{
+							"key": "per_page",
+							"value": "",
+							"disabled": true
+						},
+						{
+							"key": "name",
+							"value": null,
+							"disabled": true
+						},
+						{
+							"key": "sku",
+							"value": null,
+							"disabled": true
+						},
+						{
+							"key": "is_active",
+							"value": null,
+							"disabled": true
+						},
+						{
+							"key": "description",
+							"value": null,
+							"disabled": true
+						}
+					]
+				},
+				"description": "#### Endpoint to fetch all the products in the database and paginate the response and also filter the requested data by the product fields."
+			},
+			"response": []
+		},
+		{
+			"name": "delete_all_products",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/products",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"products"
+					]
+				},
+				"description": "#### Endpoint to delete all products in the database."
+			},
+			"response": []
+		},
+		{
+			"name": "update_product",
+			"request": {
+				"method": "PATCH",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/products/11",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"products",
+						"11"
+					]
+				},
+				"description": "#### Endpoint to update a single product in the database.\n#### Payload Content-Type must be in format application/json."
+			},
+			"response": []
+		},
+		{
+			"name": "track_product_upload",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/products/csv_upload/<upload_id>",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"products",
+						"csv_upload",
+						"<upload_id>"
+					]
+				},
+				"description": "#### Endpoint to track product upload to the database using a csv file.\n#### This endpoint takes the background task id created when at upload request and uses it to track progress.\n\n#### Sample Request\n\n\n##### Sample Response"
+			},
+			"response": []
+		}
+	]
+}
