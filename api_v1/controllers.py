@@ -25,6 +25,10 @@ from . import v1_api_product_importer
 def get_product(product_id):
     """
     Endpoint to retrieve a single product from the database.
+    
+    params: product ID
+    
+    returns: product as json
     """
     
     product = Product.query.get(product_id)
@@ -49,6 +53,8 @@ def add_product_from_json():
     Endpoint to add a single product to the database.
     Payload Content-Type must be in format application/json.
     Endpoint overrides existing duplicates with same SKU.
+    
+    returns: added product as json
     """
     
     if request.content_type != 'application/json':
@@ -124,6 +130,10 @@ def update_product(product_id):
     """
     Endpoint to update a single product in the database.
     Payload Content-Type must be in format application/json.
+    
+    params: product ID
+    
+    returns: updated product as json
     """
     
     if request.content_type != 'application/json':
@@ -172,6 +182,10 @@ def update_product(product_id):
 def delete_product(product_id):
     """
     Endpoint to delete a single product from the database.
+    
+    params: product ID
+    
+    returns: Deletion response
     """
     
     product = Product.query.get(product_id)
@@ -191,6 +205,8 @@ def delete_all_products():
     Endpoint to delete all products in the database.
     This endpoint uses a background task to handle deletion to cater for large database records that could take
     longer to delete.
+    
+    returns: Acknowledgement that deletion is processing
     """
     
     # Triggering the background task to start deletion of all products in the database.
@@ -206,6 +222,8 @@ def add_product_from_csv():
     Endpoint to add products to the database using a csv file.
     This endpoint uses background task to handle csv product upload as this may contain large datasets that could
     take longer to upload.
+    
+    returns: acknowledgement upload in progress
     """
     
     # Checking if the form name file is present in the request object.
@@ -248,6 +266,10 @@ def get_csv_upload_status(upload_id):
     """
         Endpoint to track product upload to the database using a csv file.
         This endpoint takes the background task id created when at upload request and uses it to track progress.
+        
+        params: upload id from the upload endpoint
+        
+        returns: progress of the upload
     """
     
     # Calling the task and storing its reference
@@ -290,6 +312,8 @@ def get_all_products():
     """
     Endpoint to fetch all the products in the database and paginate the response and also filter the requested data
     by the product fields.
+    
+    returns: a paginated list of the all products
     """
     
     args = request.args

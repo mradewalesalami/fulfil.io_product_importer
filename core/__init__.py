@@ -10,6 +10,7 @@ migrate = Migrate()
 def bind_home_url(app):
     """
     A home URL endpoint to test API endpoint is working.
+    
     returns: A welcome message
     """
     
@@ -36,6 +37,10 @@ def create_app(configuration_mode):
     """
     The flask app application factory.
     All integrations and extensions are initialized in this factory.
+    
+    params: configuration mode
+    
+    returns: the flask app instance
     """
     
     from configure import load_configuration
