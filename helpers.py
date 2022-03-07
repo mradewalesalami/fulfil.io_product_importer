@@ -21,7 +21,7 @@ def allowed_file_upload(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_FILE_EXTENSIONS
 
 
-def make_failure_response(message):
+def make_failure_response(message, meta=None):
     """
     This is a helper function to return a failure response.
     """
@@ -32,6 +32,9 @@ def make_failure_response(message):
             'message': message
         }
     }
+    
+    if meta is not None:
+        response.update(meta=meta)
     
     return jsonify(response)
 
@@ -67,7 +70,7 @@ def make_delete_response(message):
     return jsonify(response)
 
 
-def make_pending_response(message):
+def make_pending_response(message, meta=None):
     """
         This is a helper function to return a pending response.
     """
@@ -78,5 +81,26 @@ def make_pending_response(message):
             'message': message
         }
     }
+
+    if meta is not None:
+        response.update(meta=meta)
+    
+    return jsonify(response)
+
+
+def make_processing_response(message=None, meta=None):
+    """
+        This is a helper function to return progress update response for background tasks still processing.
+    """
+    
+    response = {
+        'status': 'PROCESSING'
+    }
+    
+    if meta is not None:
+        response.update(meta=meta)
+        
+    if message is not None:
+        response.update(message=message)
     
     return jsonify(response)

@@ -9,13 +9,15 @@ from helpers import (
     make_delete_response,
     allowed_file_upload,
     make_pending_response,
-    get_project_root
+    get_project_root,
+    make_processing_response
 )
 from werkzeug.utils import secure_filename
 import os
 from sqlalchemy import and_
 import requests
 import json
+from celery.result import AsyncResult
 
 
 @v1_api_product_importer.route('/products/<product_id>', methods=['GET'])
@@ -30,6 +32,7 @@ def get_product(product_id):
         return make_failure_response(message='Product with ID ({}) Not Found.'.format(product_id))
     
     data = {
+        'id': product.id,
         'name': product.name,
         'sku': product.sku,
         'description': product.description,
@@ -48,8 +51,8 @@ def add_product_from_json():
     """
     
     if request.content_type != 'application/json':
-        return make_failure_response('Invalid Content-Type in request headers. Only application/json is allowed.')
-        
+        return make_failure_response(message='Invalid Content-Type in request headers. Only application/json is allowed.')
+    
     payload = request.json
     
     name = payload['name'] if 'name' in payload and payload['name'] != '' or None else None
@@ -85,6 +88,7 @@ def add_product_from_json():
         db.session.commit()
         
         data = {
+            'id': product.id,
             'name': product.name,
             'sku': product.sku,
             'description': product.description,
@@ -98,6 +102,7 @@ def add_product_from_json():
         return make_failure_response(message='Product not added to Database')
     
     data = {
+        'id': product.id,
         'name': product.name,
         'sku': product.sku,
         'description': product.description,
@@ -118,10 +123,10 @@ def update_product(product_id):
     Endpoint to update a single product in the database.
     Payload Content-Type must be in format application/json.
     """
-
+    
     if request.content_type != 'application/json':
-        return make_failure_response('Invalid Content-Type in request headers. Only application/json is allowed.')
-
+        return make_failure_response(message='Invalid Content-Type in request headers. Only application/json is allowed.')
+    
     product = Product.query.get(product_id)
     
     if product is None:
@@ -145,15 +150,16 @@ def update_product(product_id):
     db.session.commit()
     
     data = {
+        'id': product.id,
         'name': product.name,
         'sku': product.sku,
         'description': product.description,
         'is_active': product.is_active
     }
-
+    
     webhook_url = app.config['WEBHOOK_URL']
     headers = app.config['REQUEST_HEADER']
-
+    
     requests.patch(url=webhook_url, data=json.dumps(data), headers=headers)
     
     return make_success_response(data)
@@ -188,7 +194,7 @@ def delete_all_products():
     from tasks import delete_all_products_from_db
     delete_all_products_from_db.delay()
     
-    return make_pending_response(message='All Products Queued for Deletion. Deletion in progress.')
+    return make_processing_response(message='Processing deletion of all products.')
 
 
 @v1_api_product_importer.route('/products/csv_upload', methods=['POST'])
@@ -219,14 +225,61 @@ def add_product_from_csv():
     
     # Triggering the background task to start the upload in the background.
     from tasks import upload_product_from_csv_to_db
-    upload_product_from_csv_to_db.delay(filename)
+    result = upload_product_from_csv_to_db.delay(filename)
     
-    return make_pending_response(message='Data Upload in Progress.')
+    # Metadata about the upload status to be returned when first uploaded.
+    meta = {
+        'upload_id': result.task_id,
+        'upload_status': result.status,
+        'upload_state': result.state
+    }
+    
+    return make_processing_response(
+        meta=meta,
+        message='Processing data upload. Progress can be tracked using upload ID.'
+    )
 
 
 @v1_api_product_importer.route('/products/csv_upload/<upload_id>', methods=['GET'])
 def get_csv_upload_status(upload_id):
-    pass
+    """
+        Endpoint to track product upload to the database using a csv file.
+        This endpoint takes the background task id created when at upload request and uses it to track progress.
+    """
+    
+    # Calling the task and storing its reference
+    result = AsyncResult(upload_id)
+    
+    # Checking upload status and return appropriate responses.
+    if result.status == 'SUCCESS':
+        data = []
+        meta = {
+            'upload_id': result.task_id,
+            'upload_status': result.status,
+            'upload_state': result.state
+        }
+        
+        return make_success_response(data, meta=meta)
+    
+    if result.status == 'PENDING':
+        meta = {
+            'upload_id': result.task_id,
+            'upload_status': result.status,
+            'upload_state': result.state
+        }
+        
+        return make_processing_response(meta=meta)
+    
+    if result.status == 'FAILURE':
+        meta = {
+            'upload_id': result.task_id,
+            'upload_status': result.status,
+            'upload_state': result.state
+        }
+        
+        return make_failure_response(message='Upload Error.', meta=meta)
+    
+    return make_failure_response(message='Invalid Upload ID or Upload Status Unknown.')
 
 
 @v1_api_product_importer.route('/products', methods=['GET'])
@@ -239,7 +292,8 @@ def get_all_products():
     args = request.args
     
     # Checking if a particular filter criteria from the request data is present and filtering accordingly.
-    filter_args = {key: value for key, value in args.items() if value is not None and key != 'page' and key != 'per_page'}
+    filter_args = {key: value for key, value in args.items() if
+                   value is not None and key != 'page' and key != 'per_page'}
     filtered_args = [getattr(Product, attribute) == value for attribute, value in filter_args.items()]
     
     page = args.get('page', 1, type=int)
@@ -249,6 +303,7 @@ def get_all_products():
     products = Product.query.filter(and_(*filtered_args)).paginate(page=page, per_page=per_page, error_out=False)
     
     data = [{
+        'id': product.id,
         'name': product.name,
         'sku': product.sku,
         'description': product.description,
