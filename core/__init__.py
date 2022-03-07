@@ -12,6 +12,7 @@ def bind_home_url(app):
     A home URL endpoint to test API endpoint is working.
     returns: A welcome message
     """
+    
     @app.route('/')
     @app.route('/api/v1.0')
     def index():
@@ -19,17 +20,28 @@ def bind_home_url(app):
     
 
 def setup_blueprints(app):
+    """
+    Helper function to set up blueprint.
+    ALl blueprints will be registered here.
+    """
+    
     from api_v1 import v1_api_product_importer
     
     app.register_blueprint(v1_api_product_importer)
 
 
 def create_app(configuration_mode):
+    """
+    The flask app application factory.
+    All integrations and extensions are initialized in this factory.
+    """
+    
     from configure import load_configuration
     from celery_ import make_celery
     
     app = Flask(__name__, instance_relative_config=True)
     
+    # Setting up all extensions.
     load_configuration(app, configuration_mode)
     setup_blueprints(app)
     bind_home_url(app)
