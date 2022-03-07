@@ -1,4 +1,4 @@
-from flask import jsonify, request
+from flask import jsonify, request, current_app as app
 from sqlalchemy.exc import IntegrityError
 from . import v1_api_product_importer
 from core.models import Product
@@ -14,6 +14,8 @@ from helpers import (
 from werkzeug.utils import secure_filename
 import os
 from sqlalchemy import and_
+import requests
+import json
 
 
 @v1_api_product_importer.route('/products/<product_id>', methods=['GET'])
@@ -102,6 +104,11 @@ def add_product_from_json():
         'is_active': product.is_active
     }
     
+    webhook_url = app.config['WEBHOOK_URL']
+    headers = app.config['REQUEST_HEADER']
+    
+    requests.post(url=webhook_url, data=json.dumps(data), headers=headers)
+    
     return make_success_response(data)
 
 
@@ -143,6 +150,11 @@ def update_product(product_id):
         'description': product.description,
         'is_active': product.is_active
     }
+
+    webhook_url = app.config['WEBHOOK_URL']
+    headers = app.config['REQUEST_HEADER']
+
+    requests.patch(url=webhook_url, data=json.dumps(data), headers=headers)
     
     return make_success_response(data)
 

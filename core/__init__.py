@@ -26,8 +26,10 @@ def setup_blueprints(app):
     """
     
     from api_v1 import v1_api_product_importer
+    from webhooks import v1_api_webhook
     
     app.register_blueprint(v1_api_product_importer)
+    app.register_blueprint(v1_api_webhook)
 
 
 def create_app(configuration_mode):
@@ -52,5 +54,6 @@ def create_app(configuration_mode):
     
     with app.app_context():
         import api_v1
+        import webhooks
         
     return app, celery
