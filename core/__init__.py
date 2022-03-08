@@ -60,6 +60,6 @@ def create_app(configuration_mode):
     with app.app_context():
         import api_v1
         import webhooks
-        db.create_all()
+        # db.create_all()
         
     return app, celery
