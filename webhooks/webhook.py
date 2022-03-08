@@ -18,7 +18,7 @@ def product_post_webhook():
     # When a new product is posted, this webhook is triggered.
     # What it does is to send the payload from the post endpoint to an external webhook site.
     requests.post(
-        url='https://webhook.site/1f9bc4d0-5974-44ed-90b7-dfc93dacf56d',
+        url='https://webhook.site/092c1398-3e5a-4a66-aee2-0dc8738f8aeb',
         data=json.dumps(request.json),
         headers=headers
     )
@@ -38,7 +38,7 @@ def product_patch_webhook():
     # When a new product is posted, this webhook is triggered.
     # What it does is to send the payload from the post endpoint to an external webhook site.
     requests.post(
-        url='https://webhook.site/1f9bc4d0-5974-44ed-90b7-dfc93dacf56d',
+        url='https://webhook.site/092c1398-3e5a-4a66-aee2-0dc8738f8aeb',
         data=json.dumps(request.json),
         headers=headers
     )
