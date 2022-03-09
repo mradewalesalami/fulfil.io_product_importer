@@ -60,7 +60,7 @@ config_modes = {
     'test': TestConfig
 }
 
-ALLOWED_CONFIGURATION_MODES = ['development', 'production']
+ALLOWED_CONFIGURATION_MODES = ['development', 'production', 'testing']
 
 
 def detect_configuration_mode():

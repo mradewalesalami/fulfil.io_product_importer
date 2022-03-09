@@ -357,18 +357,12 @@ def delete_all_products():
     """
     
     from tasks import delete_all_products_from_db
-    result = delete_all_products_from_db.delay()
-    
-    meta = {
-        'deletion_id': result.task_id,
-        'deletion_status': result.status
-    }
+    delete_all_products_from_db.delay()
     
     return make_json_response(
         message='Deletion in progress',
         status=Status.PROCESSING.phrase,
         http_status_code=Status.PROCESSING.value,
-        meta=meta
     )
 
 
@@ -458,11 +452,14 @@ def get_csv_upload_status(upload_id):
     
     progress = Progress.query.filter(Progress.task_id == upload_id).first()
     
+    done = progress.done
+    total = progress.total
+    
     data = {
-        'uploaded': progress.done,
+        'uploaded': done,
         'pending': progress.pending,
-        'total': progress.total,
-        'upload_progress': str(int(progress.done / progress.total) * 100) + '% completed'
+        'total': total,
+        'progress': f'{int(int(done) / int(total) * 100)}% completed'
     }
     
     meta = {
