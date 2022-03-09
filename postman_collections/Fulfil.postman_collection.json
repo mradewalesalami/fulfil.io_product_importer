@@ -194,7 +194,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "",
+					"raw": "{\r\n    \"name\": \"My new name\",\r\n    \"sku\": \"My-new-sku\",\r\n    \"description\": \"My new description\",\r\n    \"is_active\": false\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -202,13 +202,13 @@
 					}
 				},
 				"url": {
-					"raw": "{{url}}/products/11",
+					"raw": "{{url}}/products/<product_id>",
 					"host": [
 						"{{url}}"
 					],
 					"path": [
 						"products",
-						"11"
+						"<product_id>"
 					]
 				},
 				"description": "#### Endpoint to update a single product in the database.\n#### Payload Content-Type must be in format application/json."
