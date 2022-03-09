@@ -1,5 +1,6 @@
 import json
 import os
+from http import HTTPStatus as Status
 
 import requests
 from celery.result import AsyncResult
@@ -9,16 +10,14 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.utils import secure_filename
 
 from core import db
-from core.models import Product
+from core.models import Product, Progress
 from helpers import (
-    make_failure_response,
-    make_success_response,
-    make_delete_response,
-    allowed_file_upload,
-    get_project_root,
-    make_processing_response
+    make_json_response,
+    allowed_file_upload
 )
 from . import v1_api_product_importer
+
+ALLOWED_POST_PAYLOAD_PARAMETERS = ['name', 'sku', 'description', 'is_active']
 
 
 @v1_api_product_importer.route('/products/<product_id>', methods=['GET'])
@@ -34,7 +33,11 @@ def get_product(product_id):
     product = Product.query.get(product_id)
     
     if product is None:
-        return make_failure_response(message='Product with ID ({}) Not Found.'.format(product_id))
+        return make_json_response(
+            http_status_code=Status.NOT_FOUND.value,
+            status=Status.NOT_FOUND.phrase,
+            message='Product not found'
+        )
     
     data = {
         'id': product.id,
@@ -44,7 +47,12 @@ def get_product(product_id):
         'is_active': product.is_active
     }
     
-    return make_success_response(data)
+    return make_json_response(
+        http_status_code=Status.OK.value,
+        status=Status.OK.phrase,
+        data=data,
+        message='Successful'
+    )
 
 
 @v1_api_product_importer.route('/products', methods=['POST'])
@@ -57,19 +65,52 @@ def add_product_from_json():
     returns: added product as json
     """
     
+    """
+    Request content type validation. Must be json format.
+    """
     if request.content_type != 'application/json':
-        return make_failure_response(
-            message='Invalid Content-Type in request headers. Only application/json is allowed.')
+        return make_json_response(
+            message='Invalid Content-Type in request headers. Only application/json is allowed',
+            status=Status.FORBIDDEN.phrase,
+            http_status_code=Status.FORBIDDEN.value
+        )
     
     payload = request.json
     
-    name = payload['name'] if 'name' in payload and payload['name'] != '' or None else None
-    sku = payload['sku'] if 'sku' in payload and payload['sku'] != '' or None else None
-    description = payload['description'] if 'description' in payload and payload['description'] != '' or None else None
-    is_active = True if 'is_active' in payload and payload['is_active'] is True else False
+    """
+    Request parameter validation. Parameter must be in list of accepted parameters.
+    Request parameter must not have an empty or null value.
+    """
+    for key in payload.keys():
+        if key not in ALLOWED_POST_PAYLOAD_PARAMETERS:
+            return make_json_response(
+                message='Invalid request body: {}'.format(key),
+                status=Status.BAD_REQUEST.phrase,
+                http_status_code=Status.BAD_REQUEST.value
+            )
+        if key != 'is_active' and payload[key] == '' or None:
+            return make_json_response(
+                message='Missing values. No value for {}'.format(key),
+                status=Status.BAD_REQUEST.phrase,
+                http_status_code=Status.BAD_REQUEST.value
+            )
     
-    if not all([name, sku, description]):
-        return make_failure_response(message='Invalid or Missing Request Data')
+    payload_keys = [key for key in payload.keys()]
+    
+    """
+    Request body validation. name, sku, and description must be present in request keys.
+    """
+    if 'name' not in payload_keys or 'sku' not in payload_keys or 'description' not in payload_keys:
+        return make_json_response(
+            message='Missing request body',
+            status=Status.BAD_REQUEST.phrase,
+            http_status_code=Status.BAD_REQUEST.value
+        )
+    
+    name = payload['name']
+    sku = payload['sku']
+    description = payload['description']
+    is_active = True if 'is_active' in payload.keys() and payload['is_active'] is True else False
     
     product = Product(
         name=name,
@@ -82,10 +123,13 @@ def add_product_from_json():
     
     try:
         db.session.commit()
+    
     except IntegrityError:
         db.session.rollback()
         
-        # If there is an existing duplicate, this overwrites the data.
+        """
+        If there is an existing duplicate, overwrites the data.
+        """
         product = Product.query.filter(Product.sku == sku).first()
         product.name = name
         product.sku = sku
@@ -103,11 +147,24 @@ def add_product_from_json():
             'is_active': product.is_active
         }
         
-        return make_success_response(data)
+        return make_json_response(
+            message='Successfully Created',
+            status=Status.CREATED.phrase,
+            http_status_code=Status.CREATED.value,
+            data=data
+        )
+    
     except:
+        """
+        Catch every other exceptions.
+        """
         db.session.rollback()
         
-        return make_failure_response(message='Product not added to Database')
+        return make_json_response(
+            message='Product not added to database',
+            status=Status.INTERNAL_SERVER_ERROR.phrase,
+            http_status_code=Status.INTERNAL_SERVER_ERROR.value
+        )
     
     data = {
         'id': product.id,
@@ -117,12 +174,20 @@ def add_product_from_json():
         'is_active': product.is_active
     }
     
+    """
+    Trigger the webhook to send the created product details to an external URL.
+    """
     webhook_url = app.config['WEBHOOK_URL']
     headers = app.config['REQUEST_HEADER']
     
     requests.post(url=webhook_url, data=json.dumps(data), headers=headers)
     
-    return make_success_response(data)
+    return make_json_response(
+        message='Successfully Created',
+        status=Status.CREATED.phrase,
+        http_status_code=Status.CREATED.value,
+        data=data
+    )
 
 
 @v1_api_product_importer.route('/products/<product_id>', methods=['PATCH'])
@@ -136,31 +201,93 @@ def update_product(product_id):
     returns: updated product as json
     """
     
+    """
+    Request content type validation. Must be json format.
+    """
     if request.content_type != 'application/json':
-        return make_failure_response(
-            message='Invalid Content-Type in request headers. Only application/json is allowed.')
+        return make_json_response(
+            message='Invalid Content-Type in request headers. Only application/json is allowed',
+            status=Status.FORBIDDEN.phrase,
+            http_status_code=Status.FORBIDDEN.value
+        )
     
     product = Product.query.get(product_id)
     
     if product is None:
-        return make_failure_response(message='Product with ID ({}) Not Found.'.format(product_id))
+        return make_json_response(
+            http_status_code=Status.NOT_FOUND.value,
+            status=Status.NOT_FOUND.phrase,
+            message='Product not found'
+        )
     
     payload = request.json
     
-    # Checking for payload fields to update and updating them accordingly.
-    if 'name' in payload and payload['name'] != '' or None:
+    """
+    Request parameter validation. Parameter must be in list of accepted parameters.
+    Request parameter must not have an empty or null value.
+    """
+    for key in payload.keys():
+        if key not in ALLOWED_POST_PAYLOAD_PARAMETERS:
+            return make_json_response(
+                message='Invalid request body: {}'.format(key),
+                status=Status.BAD_REQUEST.phrase,
+                http_status_code=Status.BAD_REQUEST.value
+            )
+        """
+        Validation of null values in request body.
+        Fields are not nullable.
+        """
+        if key != 'is_active' and payload[key] is None:
+            return make_json_response(
+                message='Values cannot be null for {}'.format(key),
+                status=Status.BAD_REQUEST.phrase,
+                http_status_code=Status.BAD_REQUEST.value
+            )
+    
+    payload_keys = [key for key in payload.keys()]
+    
+    """
+    Checking for payload fields to update and updating them accordingly.
+    """
+    if 'name' in payload_keys and payload['name'] != '':
         product.name = payload['name']
-    if 'sku' in payload and payload['sku'] != '' or None:
+    
+    if 'sku' in payload_keys and payload['sku'] != '':
         product.sku = payload['sku']
-    if 'description' in payload and payload['description'] != '' or None:
+    
+    if 'description' in payload_keys and payload['description'] != '':
         product.description = payload['description']
-    if 'is_active' in payload and payload['is_active'] is True:
+    
+    if 'is_active' in payload_keys and payload['is_active'] is True:
         product.is_active = True
-    elif 'is_active' in payload and payload['is_active'] is False:
+    elif 'is_active' in payload_keys and payload['is_active'] is False:
         product.is_active = False
     
     db.session.add(product)
-    db.session.commit()
+    
+    try:
+        db.session.commit()
+    
+    except IntegrityError:
+        db.session.rollback()
+        
+        return make_json_response(
+            message='Sku not unique',
+            status=Status.BAD_REQUEST.phrase,
+            http_status_code=Status.BAD_REQUEST.value
+        )
+    
+    except:
+        """
+        Catch every other exceptions.
+        """
+        db.session.rollback()
+        
+        return make_json_response(
+            message='Product not added to database',
+            status=Status.INTERNAL_SERVER_ERROR.phrase,
+            http_status_code=Status.INTERNAL_SERVER_ERROR.value
+        )
     
     data = {
         'id': product.id,
@@ -170,12 +297,20 @@ def update_product(product_id):
         'is_active': product.is_active
     }
     
+    """
+    Trigger the webhook to send the updated product details to an external URL.
+    """
     webhook_url = app.config['WEBHOOK_URL']
     headers = app.config['REQUEST_HEADER']
     
     requests.patch(url=webhook_url, data=json.dumps(data), headers=headers)
     
-    return make_success_response(data)
+    return make_json_response(
+        message='Successfully Updated',
+        status=Status.CREATED.phrase,
+        http_status_code=Status.CREATED.value,
+        data=data
+    )
 
 
 @v1_api_product_importer.route('/products/<product_id>', methods=['DELETE'])
@@ -191,12 +326,20 @@ def delete_product(product_id):
     product = Product.query.get(product_id)
     
     if product is None:
-        return make_failure_response(message='Product with ID ({}) Not Found.'.format(product_id))
+        return make_json_response(
+            http_status_code=Status.NOT_FOUND.value,
+            status=Status.NOT_FOUND.phrase,
+            message='Product not found'
+        )
     
     db.session.delete(product)
     db.session.commit()
     
-    return make_delete_response(message='SKU ({}) with ID ({}) Successfully Deleted.'.format(product.sku, product.id))
+    return make_json_response(
+        message='Successfully Deleted',
+        status=Status.OK.phrase,
+        http_status_code=Status.OK.value
+    )
 
 
 @v1_api_product_importer.route('/products', methods=['DELETE'])
@@ -209,11 +352,24 @@ def delete_all_products():
     returns: Acknowledgement that deletion is processing
     """
     
-    # Triggering the background task to start deletion of all products in the database.
-    from tasks import delete_all_products_from_db
-    delete_all_products_from_db.delay()
+    """
+    Triggering the background task to start deletion of all products in the database.
+    """
     
-    return make_processing_response(message='Processing deletion of all products.')
+    from tasks import delete_all_products_from_db
+    result = delete_all_products_from_db.delay()
+    
+    meta = {
+        'deletion_id': result.task_id,
+        'deletion_status': result.status
+    }
+    
+    return make_json_response(
+        message='Deletion in progress',
+        status=Status.PROCESSING.phrase,
+        http_status_code=Status.PROCESSING.value,
+        meta=meta
+    )
 
 
 @v1_api_product_importer.route('/products/csv_upload', methods=['POST'])
@@ -226,85 +382,99 @@ def add_product_from_csv():
     returns: acknowledgement upload in progress
     """
     
-    # Checking if the form name file is present in the request object.
+    """
+    Checking if the form name file is present in the request object.
+    """
     if 'file' not in request.files:
-        return make_failure_response(message='Invalid Request Data.')
+        return make_json_response(
+            message='Invalid Request Data',
+            status=Status.BAD_REQUEST.phrase,
+            http_status_code=Status.BAD_REQUEST.value
+        )
     
     csv_file = request.files['file']
     
-    # Checking if a file is uploaded
+    """
+    Checking if a file is uploaded
+    """
     if csv_file.filename == '':
-        return make_failure_response(message='No file uploaded.')
+        return make_json_response(
+            message='No file uploaded',
+            status=Status.NOT_FOUND.phrase,
+            http_status_code=Status.NOT_FOUND.value
+        )
     
-    # Checking if the uploaded file is of an allowed format. Only csv files are allowed.
+    """
+    Checking if the uploaded file is of an allowed format. Only csv files are allowed.
+    """
     if csv_file and not allowed_file_upload(csv_file.filename):
-        return make_failure_response(message='Invalid file format uploaded.')
+        return make_json_response(
+            message='Invalid file format',
+            status=Status.UNSUPPORTED_MEDIA_TYPE.phrase,
+            http_status_code=Status.UNSUPPORTED_MEDIA_TYPE.value
+        )
     
-    filename = secure_filename(csv_file.filename)
-    upload_folder = get_project_root()
-    csv_file.save(os.path.join(upload_folder, filename))
-    
-    # Triggering the background task to start the upload in the background.
+    """
+    Triggering the background task to start the upload in the background.
+    """
     from tasks import upload_product_from_csv_to_db
-    result = upload_product_from_csv_to_db.delay(filename)
+    import pandas as pd
     
-    # Metadata about the upload status to be returned when first uploaded.
+    df = pd.read_csv(csv_file, converters={'sku': lambda v: v.lower()})
+    
+    result = upload_product_from_csv_to_db.delay(df)
+    
+    """
+    Metadata about the upload status to be returned when first uploaded.
+    """
     meta = {
         'upload_id': result.task_id,
-        'upload_status': result.status,
-        'upload_state': result.state
+        'upload_status': result.status
     }
     
-    return make_processing_response(
+    return make_json_response(
         meta=meta,
-        message='Processing data upload. Progress can be tracked using upload ID.'
+        message='Upload in progress',
+        status=Status.PROCESSING.phrase,
+        http_status_code=Status.PROCESSING.value,
     )
 
 
 @v1_api_product_importer.route('/products/csv_upload/<upload_id>', methods=['GET'])
 def get_csv_upload_status(upload_id):
     """
-        Endpoint to track product upload to the database using a csv file.
-        This endpoint takes the background task id created when at upload request and uses it to track progress.
-        
-        params: upload id from the upload endpoint
-        
-        returns: progress of the upload
+    Endpoint to track product upload to the database using a csv file.
+    This endpoint takes the background task id created when at upload request and uses it to track progress.
+
+    params: upload id from the upload endpoint
+
+    returns: progress of the upload
     """
-    
-    # Calling the task and storing its reference
+
+    """
+    Calling the task and storing its reference
+    """
     result = AsyncResult(upload_id)
     
-    # Checking upload status and return appropriate responses.
-    if result.status == 'SUCCESS':
-        data = []
-        meta = {
-            'upload_id': result.task_id,
-            'upload_status': result.status,
-            'upload_state': result.state
-        }
-        
-        return make_success_response(data, meta=meta)
+    progress = Progress.query.filter(Progress.task_id == upload_id).first()
     
-    if result.status == 'PENDING':
-        meta = {
-            'upload_id': result.task_id,
-            'upload_status': result.status,
-            'upload_state': result.state
-        }
-        
-        return make_processing_response(meta=meta)
+    data = {
+        'uploaded': progress.done,
+        'pending': progress.pending,
+        'total': progress.total,
+        'upload_progress': str(int(progress.done / progress.total) * 100) + '% completed'
+    }
     
-    if result.status == 'FAILURE':
-        meta = {
-            'upload_id': result.task_id,
-            'upload_status': result.status,
-            'upload_state': result.state
-        }
-        
-        return make_failure_response(message='Upload Error.', meta=meta)
+    meta = {
+        'status': result.status
+    }
     
-    return make_failure_response(message='Invalid Upload ID or Upload Status Unknown.')
+    return make_json_response(
+        meta=meta,
+        status=Status.OK.phrase,
+        http_status_code=Status.OK.value,
+        data=data
+    )
 
 
 @v1_api_product_importer.route('/products', methods=['GET'])
@@ -318,15 +488,20 @@ def get_all_products():
     
     args = request.args
     
-    # Checking if a particular filter criteria from the request data is present and filtering accordingly.
+    """
+    Checking if a particular filter criteria from the request data is present and filtering accordingly.
+    """
     filter_args = {key: value for key, value in args.items() if
                    value is not None and key != 'page' and key != 'per_page'}
+    
     filtered_args = [getattr(Product, attribute) == value for attribute, value in filter_args.items()]
     
     page = args.get('page', 1, type=int)
     per_page = args.get('per_page', 20, type=int)
     
-    # Paginated the response
+    """
+    Paginate the response
+    """
     products = Product.query.filter(and_(*filtered_args)).paginate(page=page, per_page=per_page, error_out=False)
     
     data = [{
@@ -337,7 +512,9 @@ def get_all_products():
         'is_active': product.is_active
     } for product in products.items]
     
-    # Meta data about the pagination
+    """
+    Meta data about the pagination
+    """
     meta = {
         'current_page': products.page,
         'previous_page': products.prev_num if products.has_prev else None,
@@ -348,4 +525,10 @@ def get_all_products():
         'has_previous_page': products.has_prev
     }
     
-    return make_success_response(data, meta=meta)
+    return make_json_response(
+        message='Successful',
+        data=data,
+        meta=meta,
+        status=Status.OK.phrase,
+        http_status_code=Status.OK.value
+    )

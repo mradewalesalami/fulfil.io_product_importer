@@ -22,86 +22,35 @@ def allowed_file_upload(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_FILE_EXTENSIONS
 
 
-def make_failure_response(message, meta=None):
+def make_json_response(data=None, message=None, http_status_code=None, status=None, meta=None):
     """
-    This is a helper function to return a failure response.
-    """
-    
-    response = {
-        'status': 'FAILURE',
-        'error': {
-            'message': message
-        }
-    }
-    
-    if meta is not None:
-        response.update(meta=meta)
-    
-    return jsonify(response)
-
-
-def make_success_response(response_data, meta=None):
-    """
-        This is a helper function to return a success response.
+     Generally, all responses will be in the following format:
+        "status": [string],  // HTTP status phrase for the appropriate status code
+        "message": [string], // Entirely informational.
+        "data": [object]    // contains actionable result of processing if present
+        
+    params:
+        data - This is the response data if any
+        message - Entirely Informational
+        http_status_code - HTTP status code to send to the client
+        status - HTTP status phrase for the appropriate status code
+        meta - metadata sent along with the response if any
+        
+    returns: json response
     """
     
     response = {
-        'status': 'SUCCESS',
-        'data': response_data
+        'status': status,
+        'status_code': http_status_code
     }
     
-    if meta is not None:
-        response.update(meta=meta)
-    
-    return jsonify(response)
+    if data is not None:
+        response.update(data=data)
 
-
-def make_delete_response(message):
-    """
-        This is a helper function to return delete response.
-    """
-    
-    response = {
-        'status': 'SUCCESS',
-        'info': {
-            'message': message
-        }
-    }
-    
-    return jsonify(response)
-
-
-def make_pending_response(message, meta=None):
-    """
-        This is a helper function to return a pending response.
-    """
-    
-    response = {
-        'status': 'PENDING',
-        'info': {
-            'message': message
-        }
-    }
-    
-    if meta is not None:
-        response.update(meta=meta)
-    
-    return jsonify(response)
-
-
-def make_processing_response(message=None, meta=None):
-    """
-        This is a helper function to return progress update response for background tasks still processing.
-    """
-    
-    response = {
-        'status': 'PROCESSING'
-    }
-    
-    if meta is not None:
-        response.update(meta=meta)
-    
     if message is not None:
         response.update(message=message)
-    
+
+    if meta is not None:
+        response.update(meta=meta)
+        
     return jsonify(response)

@@ -11,3 +11,12 @@ class Product(db.Model):
     
     def __repr__(self):
         return '<Product %r>' % self.sku
+
+
+class Progress(db.Model):
+    __tablename__ = 'progresses'
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.String(255), unique=True, index=True, nullable=False)
+    done = db.Column(db.Integer)
+    pending = db.Column(db.Integer)
+    total = db.Column(db.Integer)
