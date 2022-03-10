@@ -377,33 +377,11 @@ def add_product_from_csv():
     """
     
     """
-    Checking if the form name file is present in the request object.
+    Checking if the incoming upload is a csv file
     """
-    if 'file' not in request.files:
+    if request.content_type != 'text/csv':
         return make_json_response(
-            message='Invalid Request Data',
-            status=Status.BAD_REQUEST.phrase,
-            http_status_code=Status.BAD_REQUEST.value
-        )
-    
-    csv_file = request.files['file']
-    
-    """
-    Checking if a file is uploaded
-    """
-    if csv_file.filename == '':
-        return make_json_response(
-            message='No file uploaded',
-            status=Status.NOT_FOUND.phrase,
-            http_status_code=Status.NOT_FOUND.value
-        )
-    
-    """
-    Checking if the uploaded file is of an allowed format. Only csv files are allowed.
-    """
-    if csv_file and not allowed_file_upload(csv_file.filename):
-        return make_json_response(
-            message='Invalid file format',
+            message='Only CSV file allowed',
             status=Status.UNSUPPORTED_MEDIA_TYPE.phrase,
             http_status_code=Status.UNSUPPORTED_MEDIA_TYPE.value
         )
@@ -412,11 +390,7 @@ def add_product_from_csv():
     Triggering the background task to start the upload in the background.
     """
     from tasks import upload_product_from_csv_to_db
-    import pandas as pd
-    
-    df = pd.read_csv(csv_file, converters={'sku': lambda v: v.lower()})
-    
-    result = upload_product_from_csv_to_db.delay(df)
+    result = upload_product_from_csv_to_db.delay(request.data)
     
     """
     Metadata about the upload status to be returned when first uploaded.

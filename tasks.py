@@ -1,8 +1,10 @@
 import os
 import random
+from io import BytesIO
 
 import pandas as pd
 from flask import current_app as app
+import connectorx as cx
 
 from app import celery
 from core import db
@@ -25,30 +27,29 @@ def delete_all_products_from_db():
 @celery.task(bind=True)
 def upload_product_from_csv_to_db(self, data):
     """
-    Using the dask library to read the uploaded csv file, loop through the file and keep the last occurrence of
-    duplicate sku.
-    This is more efficient that iterating through the database everytime for duplicate skus which still get
-    overwritten anyway.
+    Product upload task.
     """
-
-    deduplicated_df = data.drop_duplicates(subset=['sku'], keep='last')
+    
+    csv_file = BytesIO(data)
+    csv_df = pd.read_csv(csv_file).drop_duplicates(subset=['sku'], keep='last')
     
     """
-    Loading all products in the database once into a dask dataframe object.
-    This avoids expensive database operations of round trips to the database.
+    Querying all products in the database and loading it in a pandas dataframe.
+    To iterate over it checking if any duplicates from the uploaded csv.
     """
-    fetched_db_products = pd.read_sql_table(
-        'products',
-        app.config['SQLALCHEMY_DATABASE_URI'],
-        index_col='id',
-        columns=['sku']
-    ).to_dict()
+    query_from_sql = cx.read_sql(
+        conn=app.config['SQLALCHEMY_DATABASE_URI'],
+        query="SELECT sku FROM products",
+        return_type="pandas"
+    )
+    
+    query_to_numpy = query_from_sql.to_numpy()
     
     """
     Tracking the task metadata
     """
     task_id = self.request.id
-    total_uploads = len(deduplicated_df)
+    total_uploads = len(csv_df)
     task_progress = Progress(task_id=task_id, total=total_uploads)
     db.session.add(task_progress)
     db.session.commit()
@@ -60,17 +61,22 @@ def upload_product_from_csv_to_db(self, data):
     If yes, we query the database for the duplicate product and overwrites it.
     if no, a new product is created and saved to the database.
     """
-    for row in deduplicated_df.itertuples(name='Product', index=False):
-        data = {
-            'name': row.name,
-            'sku': row.sku,
-            'description': row.description,
-            'is_active': random.choice(STATE)
-        }
-        if row.sku in fetched_db_products['sku'].values():
-            overwrite_db.delay(data)
+    for row in csv_df.itertuples(name='Product', index=False):
+        if row.sku in query_to_numpy:
+            product = Product.query.filter(Product.sku == row.sku).first()
+            product.name = row.name
+            product.sku = row.sku
+            product.description = row.description
+            product.is_active = random.choice(STATE)
+            db.session.add(product)
         else:
-            add_to_db.delay(data)
+            product = Product(
+                name=row.name,
+                sku=row.sku,
+                description=row.description,
+                is_active=random.choice(STATE)
+            )
+            db.session.add(product)
         upload_done += 1
         upload_pending = total_uploads - upload_done
         progress = Progress.query.filter(Progress.task_id == task_id).first()
@@ -78,36 +84,3 @@ def upload_product_from_csv_to_db(self, data):
         progress.pending = upload_pending
         db.session.add(progress)
         db.session.commit()
-
-
-@celery.task
-def add_to_db(data):
-    """
-    Helper function to add each row to the database
-    """
-    
-    product = Product(
-        name=data['name'],
-        sku=data['sku'],
-        description=data['description'],
-        is_active=data['is_active']
-    )
-    
-    db.session.add(product)
-    db.session.commit()
-
-
-@celery.task
-def overwrite_db(data):
-    """
-    Helper function to overwrite duplicated product and save.
-    """
-    
-    product = Product.query.filter(Product.sku == data['sku']).first()
-    product.name = data['name']
-    product.sku = data['sku']
-    product.description = data['description']
-    product.is_active = data['is_active']
-    
-    db.session.add(product)
-    db.session.commit()
