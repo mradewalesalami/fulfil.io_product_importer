@@ -390,18 +390,17 @@ def add_product_from_csv():
     Triggering the background task to start the upload in the background.
     """
     from tasks import upload_product_from_csv_to_db
-    result = upload_product_from_csv_to_db.delay(request.data)
+    upload_product_from_csv_to_db.delay(request.data)
     
     """
     Metadata about the upload status to be returned when first uploaded.
     """
-    meta = {
-        'upload_id': result.task_id,
-        'upload_status': result.status
-    }
+    # meta = {
+    #     'upload_id': result.task_id,
+    #     'upload_status': result.status
+    # }
     
     return make_json_response(
-        meta=meta,
         message='Upload in progress',
         status=Status.PROCESSING.phrase,
         http_status_code=Status.PROCESSING.value,
