@@ -418,7 +418,7 @@ def get_csv_upload_status(upload_id):
 
     returns: progress of the upload
     """
-
+    
     """
     Calling the task and storing its reference
     """
@@ -503,3 +503,13 @@ def get_all_products():
         status=Status.OK.phrase,
         http_status_code=Status.OK.value
     )
+
+
+@v1_api_product_importer.route('/products/upload', methods=['POST'])
+def upload():
+    # file = request.files['file']
+    
+    from tasks import uploadFileS3
+    uploadFileS3.delay(request.data)
+    
+    return 'done'
