@@ -9,14 +9,16 @@ import boto3
 from boto3.s3.transfer import TransferConfig
 from werkzeug.utils import secure_filename
 
-from app import celery
+from celery_ import celery
 from core import db
 from core.models import Product, Progress
 
 STATE = [True, False]
 
+celery_app = celery
 
-@celery.task
+
+@celery_app.task
 def delete_all_products_from_db():
     """
     Query all the products in Database and delete.
@@ -27,7 +29,7 @@ def delete_all_products_from_db():
     db.session.commit()
 
 
-@celery.task(bind=True)
+@celery_app.task(bind=True)
 def upload_product_from_csv_to_db(self, data):
     """
     Product upload task.
@@ -89,7 +91,7 @@ def upload_product_from_csv_to_db(self, data):
         db.session.commit()
 
 
-@celery.task
+@celery_app.task
 def uploadFileS3(file):
     s3_client = boto3.client(
         's3',

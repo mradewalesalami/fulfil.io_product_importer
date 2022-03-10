@@ -44,7 +44,7 @@ def create_app(configuration_mode):
     """
     
     from configure import load_configuration
-    from celery_ import make_celery
+    from celery_ import FlaskCelery
     
     app = Flask(__name__, instance_relative_config=True)
     
@@ -55,11 +55,11 @@ def create_app(configuration_mode):
     db.init_app(app)
     migrate.init_app(app, db)
     
-    celery = make_celery(app)
+    FlaskCelery(app=app)
     
     with app.app_context():
         import api_v1
         import webhooks
-        db.create_all()
+        # db.create_all()
         
-    return app, celery
+    return app
