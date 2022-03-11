@@ -509,9 +509,14 @@ def get_all_products():
 @v1_api_product_importer.route('/products/upload', methods=['POST'])
 def upload():
     file = request.files['file']
+    print('got file')
     filename = secure_filename(file.filename)
+    print('secured file name')
     file.save(os.path.join(gettempdir(), filename))
+    print('saved to ', gettempdir())
     from tasks import test_upload
+    print('sending to task')
     test_upload.delay(filename)
+    print('sent to task')
     
     return 'done'

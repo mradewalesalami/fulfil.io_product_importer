@@ -93,6 +93,8 @@ def upload_product_from_csv_to_db(self, data):
 
 @celery_app.task
 def test_upload(filename):
+    print('inside task')
     file = os.path.join(gettempdir(), filename)
+    print('got file from ', gettempdir())
     df = pd.read_csv(file)
     return df.to_dict()
