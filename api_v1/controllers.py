@@ -504,3 +504,39 @@ def get_all_products():
         status=Status.OK.phrase,
         http_status_code=Status.OK.value
     )
+
+
+@v1_api_product_importer.route('/products/csv_from_s3_upload', methods=['POST'])
+def add_product_from_s3():
+    args = request.args
+    bucket = args.get('bucket')
+    filepath_and_name = args.get('file')
+    
+    args_keys = [key for key in args.keys()]
+    if 'bucket' not in args_keys or 'file' not in args_keys or bucket == '' or filepath_and_name == '':
+        return make_json_response(
+            message='Missing query parameters',
+            status=Status.BAD_REQUEST.phrase,
+            http_status_code=Status.BAD_REQUEST.value
+        )
+
+    """
+    Triggering the background task to start the upload in the background.
+    """
+    from tasks import upload_product_from_s3_to_db
+    result = upload_product_from_s3_to_db.delay(bucket, filepath_and_name)
+
+    """
+    Metadata about the upload status to be returned when first uploaded.
+    """
+    meta = {
+        'upload_id': result.task_id,
+        'upload_status': result.status
+    }
+
+    return make_json_response(
+        meta=meta,
+        message='Upload in progress',
+        status=Status.PROCESSING.phrase,
+        http_status_code=Status.PROCESSING.value,
+    )
