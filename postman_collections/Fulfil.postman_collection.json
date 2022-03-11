@@ -53,14 +53,8 @@
 				"method": "POST",
 				"header": [],
 				"body": {
-					"mode": "formdata",
-					"formdata": [
-						{
-							"key": "file",
-							"type": "file",
-							"src": []
-						}
-					],
+					"mode": "file",
+					"file": {},
 					"options": {
 						"raw": {
 							"language": "json"
@@ -75,6 +69,35 @@
 					"path": [
 						"products",
 						"csv_upload"
+					]
+				},
+				"description": "#### Endpoint to add products to the database using a csv file.\n### The name/key of the form must be set to file.\n#### This endpoint accepts only csv files to be uploaded."
+			},
+			"response": []
+		},
+		{
+			"name": "add_product_from_s3",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/products/csv_from_s3_upload?bucket=iamnzapi&file=generic/product.csv",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"products",
+						"csv_from_s3_upload"
+					],
+					"query": [
+						{
+							"key": "bucket",
+							"value": "iamnzapi"
+						},
+						{
+							"key": "file",
+							"value": "generic/product.csv"
+						}
 					]
 				},
 				"description": "#### Endpoint to add products to the database using a csv file.\n### The name/key of the form must be set to file.\n#### This endpoint accepts only csv files to be uploaded."
@@ -232,6 +255,73 @@
 					]
 				},
 				"description": "#### Endpoint to track product upload to the database using a csv file.\n#### This endpoint takes the background task id created when at upload request and uses it to track progress.\n\n#### Sample Request\n\n\n##### Sample Response"
+			},
+			"response": []
+		},
+		{
+			"name": "s3_direct_file_upload",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "awsv4",
+					"awsv4": [
+						{
+							"key": "secretKey",
+							"value": "",
+							"type": "string"
+						},
+						{
+							"key": "accessKey",
+							"value": "",
+							"type": "string"
+						},
+						{
+							"key": "service",
+							"value": "s3",
+							"type": "string"
+						},
+						{
+							"key": "region",
+							"value": "us-east-2",
+							"type": "string"
+						}
+					]
+				},
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "file",
+					"file": {
+						"src": "/C:/Users/mrade/Desktop/test.csv"
+					}
+				},
+				"url": {
+					"raw": "{{s3bucket}}.s3.{{s3region}}.amazonaws.com/generic/product.csv",
+					"host": [
+						"{{s3bucket}}",
+						"s3",
+						"{{s3region}}",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"generic",
+						"product.csv"
+					]
+				},
+				"description": "#### This endpoint allows direct upload to AWS S3.\n#### The URL format to use as below:\n\n<name-of-my-S3-Bucket>.s3.<the-region-my-bucket-is-set-to>.amazonaws.com/<path-inside-S3/name-of-file-to-upload>\n\n### Go to the Authorization tab and select ‘Type’ and then ‘AWS Signature\n\n#### insert IAM User AccessKey and SecretKey\n\n#### Go to body and select binary upload, select file and click send\n\n#### There is a Test Script for status updates in the Postman console. This will tell if my file upload to S3 was successful with a status 200."
 			},
 			"response": []
 		}
