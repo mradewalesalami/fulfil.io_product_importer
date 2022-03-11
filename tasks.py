@@ -1,13 +1,11 @@
 import os
 import random
 from io import BytesIO
+from tempfile import gettempdir
 
 import pandas as pd
 from flask import current_app as app
 import connectorx as cx
-import boto3
-from boto3.s3.transfer import TransferConfig
-from werkzeug.utils import secure_filename
 from celery import Celery
 
 from core import db
@@ -94,24 +92,7 @@ def upload_product_from_csv_to_db(self, data):
 
 
 @celery_app.task
-def uploadFileS3(file):
-    s3_client = boto3.client(
-        's3',
-        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
-        aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
-    )
-    # filename = secure_filename(file.filename)
-    s3_bucket = 'iamnzapi'
-    config = TransferConfig(
-        multipart_threshold=1024 * 25,
-        max_concurrency=10,
-        multipart_chunksize=1024 * 25,
-        use_threads=True)
-    s3_client.upload_fileobj(
-        BytesIO(file),
-        s3_bucket,
-        'csvfile',
-        ExtraArgs={'ACL': 'public-read', 'ContentType': 'file.content_type'},
-        Config=config
-    )
-    return 'csvfile'
+def test_upload(filename):
+    file = os.path.join(gettempdir(), filename)
+    df = pd.read_csv(file)
+    return df.to_dict()

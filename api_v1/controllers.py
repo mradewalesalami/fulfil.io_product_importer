@@ -1,6 +1,7 @@
 import json
 import os
 from http import HTTPStatus as Status
+from tempfile import gettempdir
 
 import requests
 from celery.result import AsyncResult
@@ -507,9 +508,10 @@ def get_all_products():
 
 @v1_api_product_importer.route('/products/upload', methods=['POST'])
 def upload():
-    # file = request.files['file']
-    
-    from tasks import uploadFileS3
-    uploadFileS3.delay(request.data)
+    file = request.files['file']
+    filename = secure_filename(file.filename)
+    file.save(os.path.join(gettempdir(), filename))
+    from tasks import test_upload
+    test_upload.delay(filename)
     
     return 'done'
