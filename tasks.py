@@ -8,14 +8,16 @@ import connectorx as cx
 import boto3
 from boto3.s3.transfer import TransferConfig
 from werkzeug.utils import secure_filename
+from celery import Celery
 
-from celery_ import celery
 from core import db
 from core.models import Product, Progress
+import celeryconfig
 
 STATE = [True, False]
 
-celery_app = celery
+celery_app = Celery(__name__)
+celery_app.config_from_object(celeryconfig)
 
 
 @celery_app.task
